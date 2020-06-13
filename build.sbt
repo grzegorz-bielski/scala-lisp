@@ -5,7 +5,10 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / organization := "com.example"
 ThisBuild / organizationName := "example"
 
-// scalacOptions += "-Ypartial-unification"
+scalacOptions += "-Ymacro-annotations"
+addCompilerPlugin(
+  "org.typelevel" %% "kind-projector" % "0.11.0" cross CrossVersion.full
+)
 
 lazy val root = (project in file("."))
   .settings(
@@ -15,8 +18,8 @@ lazy val root = (project in file("."))
     libraryDependencies += "org.tpolecat" %% "atto-refined" % "0.7.0",
     libraryDependencies += "org.typelevel" %% "cats-core" % "2.0.0",
     libraryDependencies += "org.typelevel" %% "cats-effect" % "2.1.3",
-    libraryDependencies += "org.typelevel" %% "cats-mtl-core" % "0.7.0"
-    // libraryDependencies += "org.typelevel" %% "kittens" % "2.1.0"
+    libraryDependencies += "org.typelevel" %% "cats-mtl-core" % "0.7.0",
+    libraryDependencies += "io.estatico" %% "newtype" % "0.4.4"
   )
 
 // See https://www.scala-sbt.org/1.x/docs/Using-Sonatype.html for instructions on how to publish to Sonatype.
