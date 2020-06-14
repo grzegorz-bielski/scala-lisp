@@ -1,11 +1,10 @@
 package lisp
 
-import cats.Applicative
-
 object Parser {
   import atto._, Atto._
+  import cats.instances.all._
+  import scala.util.Try
   import cats.implicits._
-  import cats.syntax.flatMap._
 
   import LispVal._
 
@@ -27,12 +26,21 @@ object Parser {
     first <- letter | symbol
     rest <- many(letter | digit | symbol)
   } yield {
-    val atom = first +: rest
-
-    LispStr("") // TODO
+    val atom = (first +: rest).mkString
+    (lispBool parseOnly atom).either getOrElse LispAtom(atom)
   }
 
-  val parser = spaces ~> symbol
+  val lispNum: Parser[LispVal] = for {
+    s <- many1(digit) map (_.toList.mkString)
+    d <- Try(s.toInt).toEither match {
+      case Left(e)  => err(e.toString)
+      case Right(a) => ok(a)
+    }
+  } yield LispNum(d)
+
+  // val parser = spaces ~> symbol
+
+  val parser: Parser[LispVal] = lispAtom | lispBool | lispStr | lispNum
 
   def readExp(str: String): String =
     (parser parseOnly str).either match {
