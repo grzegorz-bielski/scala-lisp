@@ -1,5 +1,7 @@
 package lisp
 
+import cats.instances.try_
+
 object Parser {
   import atto._, Atto._
   import cats.instances.all._
@@ -12,14 +14,11 @@ object Parser {
   val spaces = skipMany1(spaceChar)
 
   val lispStr: Parser[LispVal] = for {
-    _ <- char('"')
-    s <- many(noneOf("\""))
-    _ <- char('"')
+    s <- char('"') ~> many(noneOf("\"")) <~ char('"')
   } yield LispStr(s.mkString)
 
   val lispBool: Parser[LispVal] = for {
-    _ <- char('#')
-    b <- char('t') | char('f')
+    b <- char('#') ~> (char('t') | char('f'))
   } yield LispBool((b == 't'))
 
   val lispAtom: Parser[LispVal] = for {
@@ -38,12 +37,23 @@ object Parser {
     }
   } yield LispNum(d)
 
-  // val parser = spaces ~> symbol
+  val lispExp: Parser[LispVal] =
+    lispAtom | lispNil | lispBool | lispStr | lispNum | lispQuoted | lispSExp
 
-  val parser: Parser[LispVal] = lispAtom | lispBool | lispStr | lispNum
+  val lispSExp: Parser[LispVal] = char('(') ~> lispList <~ char(')')
+
+  val lispList: Parser[LispVal] = for {
+    ll <- many(lispExp) sepBy spaces
+  } yield LispList(ll.flatten)
+
+  val lispQuoted: Parser[LispVal] = for {
+    e <- char('\'') ~> lispExp
+  } yield LispList(List(LispAtom("quote"), e))
+
+  val lispNil: Parser[LispVal] = string("Nil") map (_ => LispNil)
 
   def readExp(str: String): String =
-    (parser parseOnly str).either match {
+    (lispExp parseOnly str).either match {
       case Left(reason) => s"Err: $reason"
       case Right(x)     => s"OK: $x"
     }
