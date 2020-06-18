@@ -1,12 +1,8 @@
 package lisp
 
-import cats.instances.try_
-
 object Parser {
   import atto._, Atto._
-  import cats.instances.all._
   import scala.util.Try
-  import cats.implicits._
 
   import LispVal._
 
