@@ -23,7 +23,7 @@ class ParserSpec extends FreeSpec with TableDrivenPropertyChecks with Matchers {
       }
     }
 
-    "should no successfully parse invalid strings" in {
+    "should not successfully parse invalid strings" in {
       val cases = Table(
         ("text", "expected result"),
         (

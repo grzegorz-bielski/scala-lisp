@@ -3,6 +3,7 @@ package lisp
 object Parser {
   import atto._, Atto._
   import scala.util.Try
+  import cats.syntax.show._
 
   import LispVal._
 
@@ -48,9 +49,18 @@ object Parser {
 
   val lispNil: Parser[LispVal] = string("Nil") map (_ => LispNil)
 
-  def readExp(str: String): String =
+  def readExpToStr(str: String): String =
     (lispExp parseOnly str).either match {
-      case Left(reason) => s"Err: $reason"
-      case Right(x)     => s"OK: $x"
+      case Left(reason)  => s"Err: ${reason}"
+      case Right(result) => s"Ok: ${result.show}"
     }
+
+  def contents[A](p: Parser[A]): Parser[A] = skipWhitespace ~> p <~ endOfInput
+
+  def readExpr(str: String): ParseResult[LispVal] =
+    (contents(lispExp)) parse str
+
+  def readExprFile(str: String): ParseResult[LispVal] =
+    (contents(lispList)) parse str
+
 }
