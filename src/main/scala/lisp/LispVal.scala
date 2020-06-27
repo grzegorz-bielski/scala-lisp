@@ -17,13 +17,12 @@ sealed trait LispVal {
   def of[F[_]: Applicative] = base.pure[F]
 }
 object LispVal {
-
   case class LispAtom(v: String) extends LispVal
   case class LispList(v: List[LispVal]) extends LispVal
   case class LispNum(v: Int) extends LispVal
   case class LispStr(v: String) extends LispVal
-  case class LispFunc(v: Func) extends LispVal
-  case class LispLambda(v: Func, c: Env) extends LispVal
+  case class LispFunc(v: Fn) extends LispVal
+  case class LispLambda(v: Fn, e: Env) extends LispVal
   case object LispNil extends LispVal
   case class LispBool(v: Boolean) extends LispVal
 
@@ -39,7 +38,7 @@ object LispVal {
   })
 
   type Env = Map[String, LispVal]
-  type Func = List[LispVal] => LispEval[LispVal]
+  type Fn = List[LispVal] => LispEval[LispVal]
   type LispError = Throwable
 
   @newtype
@@ -52,7 +51,7 @@ object LispVal {
     // `Effect` doesn't provide instance for `Kleisli`, so we are sticking with only `Async`
     implicit val ea: Async[LispEval] = derivingK
 
-    // I'm not sure how to derive `ApplicativeLocal`
+    // I'm not sure how to automatically derive `ApplicativeLocal`
     implicit val al: ApplicativeLocal[LispEval, Env] =
       new DefaultApplicativeLocal[LispEval, Env]() {
         val applicative: Applicative[LispEval] = Applicative[LispEval]
@@ -61,11 +60,7 @@ object LispVal {
           LispEval(Kleisli.local(f)(fa.unEval))
       }
 
-    val aaa = ApplicativeAsk[LispEval, Env].ask
-    val l = ApplicativeLocal[LispEval, Env].ask
-
-    def raiseError[A](e: Throwable): LispEval[A] =
-      LiftIO[LispEval].liftIO(IO.raiseError(e))
+    def raiseError[A](e: Throwable): LispEval[A] = LiftIO[LispEval].liftIO(IO.raiseError(e))
   }
 
 }
