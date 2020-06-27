@@ -16,15 +16,15 @@ object Eval {
   def run(a: String): IO[Unit] = ???
 
   def runParser(input: String): LispEval[LispVal] = Parser.readExprFile(input).either match {
-    case Left(value)  => LispEval.raiseError(new Error(value))
-    case Right(value) => evalBody(value)
+    case Left(a)  => LispError.UnrecognizedError(a).raise
+    case Right(v) => evalBody(v)
   }
 
   def runProgram[A](code: Env)(action: LispEval[A]): IO[A] = action.unEval(code)
 
   private def readFn(a: LispVal): LispEval[LispVal] = ???
 
-  private def eval(a: LispVal): LispEval[LispVal] = a match {
+  def eval(a: LispVal): LispEval[LispVal] = a match {
     case v @ LispNum(_)                                             => v.of[LispEval]
     case v @ LispStr(_)                                             => v.of[LispEval]
     case v @ LispBool(_)                                            => v.of[LispEval]
@@ -74,7 +74,7 @@ object Eval {
       env <- AL.ask
       value <- env.get(atom.v) match {
         case Some(v) => v.of[LispEval]
-        case None    => LispEval.raiseError(new Error("Unbound variable"))
+        case None    => LispError.VariableNotInScope(atom).raise
       }
     } yield value
 
@@ -82,7 +82,7 @@ object Eval {
     eval(pred).flatMap({
       case LispBool(true)  => eval(onT)
       case LispBool(false) => eval(onF)
-      case _               => LispEval.raiseError(new Error("Could not eval the 'if'"))
+      case _               => LispError.IncorrectSpecialForm("if").raise
     })
 
   def evalLet(pairs: List[LispVal])(expr: LispVal): LispEval[LispVal] = {
@@ -121,15 +121,14 @@ object Eval {
       r <- fn match {
         case LispFunc(f)      => f(arg)
         case LispLambda(f, e) => AL.local(_ => e)(f(arg))
-        case _                => LispEval.raiseError(new Error("Not a function"))
+        case v                => LispError.NotAFunction(v).raise
       }
     } yield r
 
-  def extractAtom(v: LispVal): LispEval[LispAtom] =
-    v match {
-      case v @ LispAtom(_) => v.pure[LispEval]
-      case e               => LispEval.raiseError(new Error("type mismatch, required atom"))
-    }
+  def extractAtom(v: LispVal): LispEval[LispAtom] = v match {
+    case v @ LispAtom(_) => v.pure[LispEval]
+    case e               => LispError.VariableNotInScope(e).raise
+  }
 
   def applyLambda(expr: LispVal)(params: List[LispVal])(args: List[LispVal]) =
     for {

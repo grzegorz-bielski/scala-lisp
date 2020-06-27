@@ -26,20 +26,19 @@ object LispVal {
   case object LispNil extends LispVal
   case class LispBool(v: Boolean) extends LispVal
 
-  implicit val s: Show[LispVal] = Show.show({
+  implicit val s: Show[LispVal] = Show.show {
     case LispAtom(v)      => v
-    case LispList(v)      => s"(${v.map(Show[LispVal].show).mkString(" ")})"
+    case LispList(v)      => s"(${v map Show[LispVal].show mkString " "})"
     case LispNum(v)       => Show[Int].show(v)
     case LispFunc(v)      => "(internal function)"
     case LispLambda(v, c) => "(lambda function)"
     case LispStr(v)       => s"""\"$v\""""
     case LispNil          => "Nil"
     case LispBool(v)      => if (v) "#t" else "#f"
-  })
+  }
 
   type Env = Map[String, LispVal]
   type Fn = List[LispVal] => LispEval[LispVal]
-  type LispError = Throwable
 
   @newtype
   sealed case class LispEval[A](unEval: Kleisli[IO, Env, A])
@@ -59,8 +58,35 @@ object LispVal {
         def local[A](f: Env => Env)(fa: LispEval[A]): LispEval[A] =
           LispEval(Kleisli.local(f)(fa.unEval))
       }
-
-    def raiseError[A](e: Throwable): LispEval[A] = LiftIO[LispEval].liftIO(IO.raiseError(e))
   }
 
+  sealed trait LispError extends Throwable {
+    def raise[A](): LispEval[A] = LiftIO[LispEval].liftIO(IO.raiseError(this))
+  }
+  object LispError {
+    case class IncorrectArgsNum(n: Int, v: List[LispVal]) extends LispError
+    case class IncorrectListLength(n: Int, a: String) extends LispError
+    case class ExpectedList(a: String) extends LispError
+    case class IncorrectType(a: String, v: LispVal) extends LispError
+    case class IncorrectSpecialForm(a: String) extends LispError
+    case class NotAFunction(v: LispVal) extends LispError
+    case class VariableNotInScope(a: LispVal) extends LispError
+    case class CouldNotParse(a: String) extends LispError
+    case class IOError(a: String) extends LispError
+    case class UnrecognizedError(a: String) extends LispError
+
+    implicit val s: Show[LispError] = Show.show {
+      case IncorrectArgsNum(n, v) =>
+        s"Error: Incorrect number of arguments, expected: ${n}, received: ${v.length}"
+      case IncorrectListLength(n, a) => s"Error: The List in ${a} has a length of: ${n}"
+      case ExpectedList(a)           => s"Error: Expected List in :${a}"
+      case IncorrectType(a, v)       => s"Error: Mismatched type, ${a}, ${v.show}"
+      case IncorrectSpecialForm(a)   => s"Error: The special form is not correct: ${a}"
+      case NotAFunction(v)           => s"Error: Expected a function, got: ${v.show}"
+      case VariableNotInScope(v)     => s"Error: Variable '${v.show}' is not in scope"
+      case CouldNotParse(a)          => s"Error: Couldn't parse the ${a}"
+      case IOError(a)                => s"Error: I/O exception while reading the ${a}"
+      case UnrecognizedError(a)      => s"Error: Encountered unrecognized error: ${a}"
+    }
+  }
 }
