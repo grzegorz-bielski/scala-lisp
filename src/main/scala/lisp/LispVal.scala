@@ -5,9 +5,8 @@ import cats.data.Kleisli
 import cats.{Monad, Functor, Applicative, Show}
 import cats.implicits._
 import cats.effect.{LiftIO, IO, Effect, Async}
-import cats.mtl.ApplicativeLocal
-import cats.mtl.DefaultApplicativeLocal
-import cats.mtl.ApplicativeAsk
+import cats.mtl.{ApplicativeLocal, DefaultApplicativeLocal, ApplicativeAsk}
+import cats.Foldable
 
 sealed trait LispVal {
   // `A` type on the `LispEval` cannot be covariant
@@ -67,7 +66,7 @@ object LispVal {
     case class IncorrectArgsNum(n: Int, v: List[LispVal]) extends LispError
     case class IncorrectListLength(n: Int, a: String) extends LispError
     case class ExpectedList(a: String) extends LispError
-    case class IncorrectType(a: String, v: LispVal) extends LispError
+    case class IncorrectType(a: String) extends LispError
     case class IncorrectSpecialForm(a: String) extends LispError
     case class NotAFunction(v: LispVal) extends LispError
     case class VariableNotInScope(a: LispVal) extends LispError
@@ -80,7 +79,7 @@ object LispVal {
         s"Error: Incorrect number of arguments, expected: ${n}, received: ${v.length}"
       case IncorrectListLength(n, a) => s"Error: The List in ${a} has a length of: ${n}"
       case ExpectedList(a)           => s"Error: Expected List in :${a}"
-      case IncorrectType(a, v)       => s"Error: Mismatched type, ${a}, ${v.show}"
+      case IncorrectType(a)          => s"Error: Mismatched type, ${a}"
       case IncorrectSpecialForm(a)   => s"Error: The special form is not correct: ${a}"
       case NotAFunction(v)           => s"Error: Expected a function, got: ${v.show}"
       case VariableNotInScope(v)     => s"Error: Variable '${v.show}' is not in scope"
