@@ -4,6 +4,7 @@ import lisp.LispVal._
 import cats.effect.{IO, LiftIO}
 import cats.implicits._
 import cats.Foldable
+import cats.effect.Resource
 
 object Primitives {
   type Prim = List[(String, LispVal)]
@@ -27,7 +28,12 @@ object Primitives {
     ("eq?", LispFunc(binaryOp(eqCmd))),
     ("bl-eq?", LispFunc(binaryOp(eqOp(_ == _)))),
     ("and", LispFunc(binaryOpFold(eqOp(_ && _))(LispBool(true)))),
-    ("or", LispFunc(binaryOpFold(eqOp(_ || _))(LispBool(true))))
+    ("or", LispFunc(binaryOpFold(eqOp(_ || _))(LispBool(true)))),
+    ("cons", LispFunc(cons)),
+    ("cdr", LispFunc(cdr)),
+    ("car", LispFunc(car)),
+    ("file?", LispFunc(unaryOp(fileExists))),
+    ("slurp", LispFunc(unaryOp(slurp)))
   )
 
   def unaryOp(op: Unary)(vs: List[LispVal]): LispEval[LispVal] = vs match {
@@ -113,9 +119,10 @@ object Primitives {
     case v           => LispError.IncorrectType("expected str").raise
   }
 
-  // def slurp(v: LispVal): LispEval[LispVal] = v match {
-  //   case LispStr(txt) => writeToFile
-  // }
+  def slurp(v: LispVal): LispEval[LispVal] = v match {
+    case LispStr(txt) => LiftIO[LispEval].liftIO(readFile(txt) map LispStr)
+    case _            => LispError.IncorrectType("expected str").raise
+  }
 
   def doesFileExist(path: String): IO[Boolean] = {
     import java.nio.file.{Paths, Files}
@@ -123,8 +130,11 @@ object Primitives {
     IO(Paths.get("/tmp")) >>= (x => IO(Files.exists(x)))
   }
 
-  // def writeToFile(text: String): IO[LispVal] = {
-
-  // }
+  def readFile(path: String): IO[String] =
+    Resource
+      .fromAutoCloseable(
+        IO(scala.io.Source.fromFile(path))
+      )
+      .use(s => IO(s.mkString))
 
 }
