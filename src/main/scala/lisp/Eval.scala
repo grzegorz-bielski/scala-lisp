@@ -2,29 +2,41 @@ package lisp
 
 import cats.data.Kleisli
 import cats.mtl.ApplicativeLocal
+import cats.implicits._
+import cats.effect.IO
 
 object Eval {
-  import cats.implicits._
-  import cats.effect.IO
   import LispVal._
 
   private lazy val AL = ApplicativeLocal[LispEval, Env]
+
+  type LEval = LispEval[LispVal]
+  type LList = List[LispVal]
 
   def basicEnv() =
     Primitives.primEnv.toMap combineK Map("read" -> LispFunc(Primitives.unaryOp(readFn)))
 
   def run(a: String): IO[Unit] = ???
 
-  def runParser(input: String): LispEval[LispVal] = Parser.readExprFile(input).either match {
+  def evalStr(str: String): IO[Unit] = ???
+
+  def runParser(input: String): LEval = Parser.readExprFile(input).either match {
     case Left(a)  => LispError.UnrecognizedError(a).raise
     case Right(v) => evalBody(v)
   }
 
+  def runParserForASTPreview(str: String): String = Parser.readExpr(str).either foldMap (_.show)
+
   def runProgram[A](code: Env)(action: LispEval[A]): IO[A] = action.unEval(code)
 
-  private def readFn(a: LispVal): LispEval[LispVal] = ???
+  def readFn(a: LispVal): LEval = ???
+  def parseFn(a: LispVal): LEval = a match {
+    case LispStr(str) =>
+      Parser.readExpr(str).either fold (LispError.CouldNotParse(_).raise, _.of[LispEval])
+    case _ => LispError.IncorrectType(s"Expected string").raise
+  }
 
-  def eval(a: LispVal): LispEval[LispVal] = a match {
+  def eval(a: LispVal): LEval = a match {
     case v @ LispNum(_)                                             => v.of[LispEval]
     case v @ LispStr(_)                                             => v.of[LispEval]
     case v @ LispBool(_)                                            => v.of[LispEval]
@@ -43,7 +55,7 @@ object Eval {
     case LispList(x :: xs)                                          => evalApplication(x)(xs)
   }
 
-  def evalBody(a: LispVal): LispEval[LispVal] = a match {
+  def evalBody(a: LispVal): LEval = a match {
     case LispList(List(LispList(LispAtom("define") :: List(LispAtom(v), expr)), rest)) =>
       for {
         env <- AL.ask
@@ -69,7 +81,7 @@ object Eval {
     case v => eval(v)
   }
 
-  def evalAtom(atom: LispAtom): LispEval[LispVal] =
+  def evalAtom(atom: LispAtom): LEval =
     for {
       env <- AL.ask
       value <- env.get(atom.v) match {
@@ -78,14 +90,14 @@ object Eval {
       }
     } yield value
 
-  def evalIf(pred: LispVal)(onT: LispVal)(onF: LispVal): LispEval[LispVal] =
+  def evalIf(pred: LispVal)(onT: LispVal)(onF: LispVal): LEval =
     eval(pred).flatMap({
       case LispBool(true)  => eval(onT)
       case LispBool(false) => eval(onF)
       case _               => LispError.IncorrectSpecialForm("if").raise
     })
 
-  def evalLet(pairs: List[LispVal])(expr: LispVal): LispEval[LispVal] = {
+  def evalLet(pairs: LList)(expr: LispVal): LEval = {
     def evenSide[A](v: List[A]): List[A] = v match {
       case Nil     => Nil
       case x :: xs => x :: oddSide(xs)
@@ -99,7 +111,7 @@ object Eval {
     applyLambda(expr)(evenSide(pairs))(oddSide(pairs))
   }
 
-  def evalDefine(varExpr: LispVal)(expr: LispVal): LispEval[LispVal] =
+  def evalDefine(varExpr: LispVal)(expr: LispVal): LEval =
     for {
       env <- AL.ask
       atom <- extractAtom(varExpr)
@@ -111,10 +123,10 @@ object Eval {
       v <- AL.local(modEnv)(varExpr.of[LispEval])
     } yield v
 
-  def evalLambda(params: List[LispVal])(expr: LispVal): LispEval[LispVal] =
+  def evalLambda(params: LList)(expr: LispVal): LEval =
     AL.ask.map(LispLambda(applyLambda(expr)(params) _, _))
 
-  def evalApplication(x: LispVal)(xs: List[LispVal]): LispEval[LispVal] =
+  def evalApplication(x: LispVal)(xs: LList): LEval =
     for {
       fn <- eval(x)
       arg <- xs traverse eval
@@ -130,7 +142,7 @@ object Eval {
     case e               => LispError.VariableNotInScope(e).raise
   }
 
-  def applyLambda(expr: LispVal)(params: List[LispVal])(args: List[LispVal]) =
+  def applyLambda(expr: LispVal)(params: LList)(args: LList) =
     for {
       env <- AL.ask
       atoms <- params traverse extractAtom
