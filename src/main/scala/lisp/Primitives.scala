@@ -114,46 +114,18 @@ object Primitives {
   }
 
   def put(file: LispVal)(mag: LispVal): LispEval[LispVal] = (file, mag) match {
-    case (LispStr(f), LispStr(m)) => LiftIO[LispEval].liftIO(writeFile(f)(m))
+    case (LispStr(f), LispStr(m)) => LiftIO[LispEval].liftIO(IoOps.writeFile(f)(m))
     case (a, b)                   => LispError.IncorrectType("expected str").raise
   }
 
   def fileExists(v: LispVal): LispEval[LispVal] = v match {
     case LispAtom(a) => fileExists(LispStr(a))
-    case LispStr(a)  => LiftIO[LispEval].liftIO(doesFileExist(a)) map LispBool
+    case LispStr(a)  => LiftIO[LispEval].liftIO(IoOps.doesFileExist(a)) map LispBool
     case v           => LispError.IncorrectType("expected str").raise
   }
 
   def slurp(v: LispVal): LispEval[LispVal] = v match {
-    case LispStr(txt) => LiftIO[LispEval].liftIO(readFile(txt) map LispStr)
+    case LispStr(txt) => LiftIO[LispEval].liftIO(IoOps.readFile(txt) map LispStr)
     case _            => LispError.IncorrectType("expected str").raise
   }
-
-  def doesFileExist(path: String): IO[Boolean] = {
-    import java.nio.file.{Paths, Files}
-
-    IO(Paths.get("/tmp")) >>= (x => IO(Files.exists(x)))
-  }
-
-  def writeFile(path: String)(content: String): IO[LispVal] = {
-    import java.nio.charset.StandardCharsets
-    import java.nio.file.{Paths, Files}
-
-    doesFileExist(path) ifM (
-      for {
-        p <- IO(Paths.get(path))
-        b <- IO(content.getBytes(StandardCharsets.UTF_8))
-        _ <- IO(Files.write(p, b))
-      } yield LispStr(content),
-      IO.raiseError(LispError.IOError(s"File at the '${path}' does not exist"))
-    )
-  }
-
-  def readFile(path: String): IO[String] = doesFileExist(path) ifM (
-    Resource
-      .fromAutoCloseable(IO(scala.io.Source.fromFile(path)))
-      .use(s => IO(s.mkString)),
-    IO.raiseError(LispError.IOError(s"File at the '${path}' does not exist"))
-  )
-
 }

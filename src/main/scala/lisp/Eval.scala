@@ -4,6 +4,7 @@ import cats.data.Kleisli
 import cats.mtl.ApplicativeLocal
 import cats.implicits._
 import cats.effect.IO
+import cats.Show
 
 object Eval {
   import LispVal._
@@ -13,21 +14,35 @@ object Eval {
   type LEval = LispEval[LispVal]
   type LList = List[LispVal]
 
+  def run(expr: String): IO[Unit] =
+    for {
+      stdLib <- IoOps.readFile("std/lib/scm")
+      evalStr = parseWithStdLib(stdLib)(expr) fold ((_.raise), evalBody)
+      toRun = evalStr.unEval(basicEnv) // can't do it in one line for some reason (type erasure?)
+      r <- toRun map (_.show)
+      _ <- IoOps.putStrLn(r)
+    } yield ()
+
   def basicEnv() =
     Primitives.primEnv.toMap combineK Map("read" -> LispFunc(Primitives.unaryOp(readFn)))
 
-  def run(a: String): IO[Unit] = ???
+  def parseWithStdLib(lib: String)(expr: String): Either[LispError, LispVal] = {
+    def incorrectType[A: Show](n: A) = LispError.IncorrectType(s"Failed to get variable: ${n.show}")
 
-  def evalStr(str: String): IO[Unit] = ???
+    val parsed = for {
+      l <- Parser.readExprFile(lib).either
+      e <- Parser.readExpr(expr).either
+    } yield (l, e)
 
-  def runParser(input: String): LEval = Parser.readExprFile(input).either match {
-    case Left(a)  => LispError.UnrecognizedError(a).raise
-    case Right(v) => evalBody(v)
+    parsed
+      .leftMap(incorrectType(_))
+      .flatMap {
+        case (LispList(v), expr) => Right(LispList(v |+| List(expr)))
+        case (n, _)              => Left(incorrectType(n))
+      }
   }
 
   def runParserForASTPreview(str: String): String = Parser.readExpr(str).either foldMap (_.show)
-
-  def runProgram[A](code: Env)(action: LispEval[A]): IO[A] = action.unEval(code)
 
   def readFn(a: LispVal): LEval = ???
   def parseFn(a: LispVal): LEval = a match {
@@ -52,8 +67,27 @@ object Eval {
     case LispList(LispAtom("begin") :: rest)                        => evalBody(LispList(rest))
     case LispList(List(LispAtom("define"), varExp, expr))           => evalDefine(varExp)(expr)
     case LispList(List(LispAtom("lambda"), LispList(params), expr)) => evalLambda(params)(expr)
-    case LispList(x :: xs)                                          => evalApplication(x)(xs)
+    case LispList(List(LispAtom("cdr"), LispList(List(LispAtom("quote"), LispList(x :: xs))))) =>
+      LispList(xs).of[LispEval]
+    case LispList(List(LispAtom("cdr"), arg @ LispList(x :: xs))) => evalCdrComposition(x)(xs)(arg)
+    case LispList(List(LispAtom("car"), LispList(List(LispAtom("quote"), LispList(x :: xs))))) =>
+      LispList(xs).of[LispEval]
+    case LispList(List(LispAtom("car"), arg @ LispList(x :: xs))) => evalCarComposition(x)(xs)(arg)
+
+    case LispList(x :: xs) => evalApplication(x)(xs)
   }
+
+  def evalCarComposition(x: LispVal)(xs: List[LispVal])(arg: LispList): LispEval[LispVal] =
+    x match {
+      case LispAtom(_) => eval(arg) flatMap (a => eval(LispList(List(LispAtom("car"), a))))
+      case _           => LispList(xs).of[LispEval]
+    }
+
+  def evalCdrComposition(x: LispVal)(xs: List[LispVal])(arg: LispList): LispEval[LispVal] =
+    x match {
+      case LispAtom(_) => eval(arg) flatMap (a => eval(LispList(List(LispAtom("cdr"), a))))
+      case _           => x.of[LispEval]
+    }
 
   def evalBody(a: LispVal): LEval = a match {
     case LispList(List(LispList(LispAtom("define") :: List(LispAtom(v), expr)), rest)) =>

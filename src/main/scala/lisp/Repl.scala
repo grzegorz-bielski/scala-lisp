@@ -1,27 +1,24 @@
 package lisp
 
 import cats.effect.IO
-
-import scala.io.StdIn.readLine
 import cats.implicits._
+
 import lisp.LispVal.LispError
+import IoOps.{putStrLn, readLn}
 
 object Repl {
-
   def run(): IO[Unit] =
     for {
       _ <- putStrLn("repl: ")
-      line <- IO(readLine) map Option.apply
+      line <- readLn
       _ <- line match {
         case None    => putStrLn("👋")
         case Some(v) => process(v) >> run
       }
     } yield ()
 
-  def putStrLn(txt: String) = IO(println(txt))
-
   def process(str: String): IO[Unit] =
-    exec(Eval.evalStr(str)) flatMap {
+    exec(Eval.run(str)) flatMap {
       case Left(v)  => putStrLn(v)
       case Right(v) => v.pure[IO]
     }
