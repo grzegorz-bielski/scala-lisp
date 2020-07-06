@@ -5,6 +5,7 @@ import cats.mtl.ApplicativeLocal
 import cats.implicits._
 import cats.effect.IO
 import cats.Show
+import scala.io.Source
 
 object Eval {
   import LispVal._
@@ -16,23 +17,31 @@ object Eval {
 
   def run(expr: String): IO[Unit] =
     for {
-      stdLib <- IoOps.readFile("std/lib/scm")
+      stdLib <- loadStdLib
       evalStr = parseWithStdLib(stdLib)(expr) fold ((_.raise), evalBody)
-      toRun = evalStr.unEval(basicEnv) // can't do it in one line for some reason (type erasure?)
+      toRun = evalStr.unEval(basicEnv) // can't do it in one line for some reason (type erasure? 🤔)
       r <- toRun map (_.show)
       _ <- IoOps.putStrLn(r)
     } yield ()
 
-  def basicEnv() =
-    Primitives.primEnv.toMap combineK Map("read" -> LispFunc(Primitives.unaryOp(readFn)))
+  def loadStdLib(): IO[String] = IO(Source.fromResource("std/lib.scm")) map (_.mkString)
+
+  def basicEnv(): Env = Primitives.primEnv.toMap
+  // Primitives.primEnv.toMap combineK Map("read" -> LispFunc(Primitives.unaryOp(readFn)))
 
   def parseWithStdLib(lib: String)(expr: String): Either[LispError, LispVal] = {
     def incorrectType[A: Show](n: A) = LispError.IncorrectType(s"Failed to get variable: ${n.show}")
 
+    val pl = Parser.readExprFile(lib).either
+    val pe = Parser.readExpr(expr).either
+
+    println(pl)
+    println(pe)
+
     val parsed = for {
-      l <- Parser.readExprFile(lib).either
-      e <- Parser.readExpr(expr).either
-    } yield (l, e)
+      l <- pl
+      e <- pe
+    } yield (e, e)
 
     parsed
       .leftMap(incorrectType(_))
@@ -79,13 +88,13 @@ object Eval {
 
   def evalCarComposition(x: LispVal)(xs: List[LispVal])(arg: LispList): LispEval[LispVal] =
     x match {
-      case LispAtom(_) => eval(arg) flatMap (a => eval(LispList(List(LispAtom("car"), a))))
+      case LispAtom(_) => eval(arg) >>= (a => eval(LispList(List(LispAtom("car"), a))))
       case _           => LispList(xs).of[LispEval]
     }
 
   def evalCdrComposition(x: LispVal)(xs: List[LispVal])(arg: LispList): LispEval[LispVal] =
     x match {
-      case LispAtom(_) => eval(arg) flatMap (a => eval(LispList(List(LispAtom("cdr"), a))))
+      case LispAtom(_) => eval(arg) >>= (a => eval(LispList(List(LispAtom("cdr"), a))))
       case _           => x.of[LispEval]
     }
 
@@ -125,11 +134,11 @@ object Eval {
     } yield value
 
   def evalIf(pred: LispVal)(onT: LispVal)(onF: LispVal): LEval =
-    eval(pred).flatMap({
+    eval(pred) >>= {
       case LispBool(true)  => eval(onT)
       case LispBool(false) => eval(onF)
       case _               => LispError.IncorrectSpecialForm("if").raise
-    })
+    }
 
   def evalLet(pairs: LList)(expr: LispVal): LEval = {
     def evenSide[A](v: List[A]): List[A] = v match {

@@ -4,12 +4,12 @@ import cats.effect.IO
 import cats.implicits._
 
 import lisp.LispVal.LispError
-import IoOps.{putStrLn, readLn}
+import IoOps.{putStrLn, putStr, readLn}
 
 object Repl {
   def run(): IO[Unit] =
     for {
-      _ <- putStrLn("repl: ")
+      _ <- putStr("repl: ")
       line <- readLn
       _ <- line match {
         case None    => putStrLn("👋")
@@ -18,7 +18,7 @@ object Repl {
     } yield ()
 
   def process(str: String): IO[Unit] =
-    exec(Eval.run(str)) flatMap {
+    exec(Eval.run(str)) >>= {
       case Left(v)  => putStrLn(v)
       case Right(v) => v.pure[IO]
     }

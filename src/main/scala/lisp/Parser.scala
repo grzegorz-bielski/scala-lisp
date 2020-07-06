@@ -18,6 +18,13 @@ object Parser {
     b <- char('#') ~> (char('t') | char('f'))
   } yield LispBool((b == 't'))
 
+  val lispNum: Parser[LispVal] = for {
+    sign <- opt(char('-'))
+    s <- many1(digit) map (_.toList.mkString)
+    d <- Try(s.toInt).toEither fold (e => err(e.toString), ok(_))
+    n = sign map (_ => d * -1) getOrElse d
+  } yield LispNum(n)
+
   val lispAtom: Parser[LispVal] = for {
     first <- letter | symbol
     rest <- many(letter | digit | symbol)
@@ -25,14 +32,6 @@ object Parser {
     val atom = (first +: rest).mkString
     (lispBool parseOnly atom).either getOrElse LispAtom(atom)
   }
-
-  val lispNum: Parser[LispVal] = for {
-    s <- many1(digit) map (_.toList.mkString)
-    d <- Try(s.toInt).toEither match {
-      case Left(e)  => err(e.toString)
-      case Right(a) => ok(a)
-    }
-  } yield LispNum(d)
 
   val lispExp: Parser[LispVal] =
     lispAtom | lispNil | lispBool | lispStr | lispNum | lispQuoted | lispSExp
@@ -49,13 +48,8 @@ object Parser {
 
   val lispNil: Parser[LispVal] = string("Nil") map (_ => LispNil)
 
-  def readExpToStr(str: String): String =
-    (lispExp parseOnly str).either match {
-      case Left(reason)  => s"Err: ${reason}"
-      case Right(result) => s"Ok: ${result.show}"
-    }
-
   def contents[A](p: Parser[A]): Parser[A] = skipWhitespace ~> p <~ endOfInput
+  // def contents[A](p: Parser[A]): Parser[A] = skipWhitespace ~> p <~ skipWhitespace
 
   def readExpr(str: String): ParseResult[LispVal] =
     (contents(lispExp)) parse str

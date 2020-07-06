@@ -11,7 +11,7 @@ object IoOps {
   def doesFileExist(path: String): IO[Boolean] = {
     import java.nio.file.{Paths, Files}
 
-    IO(Paths.get("/tmp")) >>= (x => IO(Files.exists(x)))
+    IO(Paths.get(path)) >>= (x => IO(Files.exists(x)))
   }
 
   def writeFile(path: String)(content: String): IO[LispVal] = {
@@ -36,6 +36,8 @@ object IoOps {
   )
 
   def putStrLn(txt: String) = IO(println(txt))
+
+  def putStr(txt: String) = IO(print(txt))
 
   def readLn() = IO(readLine) map Option.apply
 }
