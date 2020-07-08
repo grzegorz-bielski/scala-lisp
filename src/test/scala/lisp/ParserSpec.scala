@@ -147,10 +147,13 @@ class ParserSpec extends FreeSpec with TableDrivenPropertyChecks with Matchers {
     "should successfully parse lisp exp" in {
       val cases = Table(
         ("text", "expected result"),
-        (raw"""()""", ParseResult.Done("", LispList(List())))
+        (raw"""  () """, ParseResult.Done("", LispList(List()))),
+        (raw"""  
+              1 
+            """, ParseResult.Done("", LispNum(1)))
       )
 
-      forAll(cases) { (text, expected) => (Parser.readExpr(text)) shouldBe expected }
+      forAll(cases) { (text, expected) => Parser.readExpr(text) shouldBe expected }
     }
   }
 

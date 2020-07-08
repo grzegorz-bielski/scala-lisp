@@ -32,16 +32,10 @@ object Eval {
   def parseWithStdLib(lib: String)(expr: String): Either[LispError, LispVal] = {
     def incorrectType[A: Show](n: A) = LispError.IncorrectType(s"Failed to get variable: ${n.show}")
 
-    val pl = Parser.readExprFile(lib).either
-    val pe = Parser.readExpr(expr).either
-
-    println(pl)
-    println(pe)
-
     val parsed = for {
-      l <- pl
-      e <- pe
-    } yield (e, e)
+      l <- Parser.readExprFile(lib).either
+      e <- Parser.readExpr(expr).either
+    } yield (l, e)
 
     parsed
       .leftMap(incorrectType(_))
@@ -53,7 +47,6 @@ object Eval {
 
   def runParserForASTPreview(str: String): String = Parser.readExpr(str).either foldMap (_.show)
 
-  def readFn(a: LispVal): LEval = ???
   def parseFn(a: LispVal): LEval = a match {
     case LispStr(str) =>
       Parser.readExpr(str).either fold (LispError.CouldNotParse(_).raise, _.of[LispEval])
