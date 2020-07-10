@@ -19,15 +19,13 @@ object Eval {
     for {
       stdLib <- loadStdLib
       evalStr = parseWithStdLib(stdLib)(expr) fold ((_.raise), evalBody)
-      toRun = evalStr.unEval(basicEnv) // can't do it in one line for some reason (type erasure? 🤔)
+
+      toRun = evalStr.unEval(Primitives.primEnv.toMap)
       r <- toRun map (_.show)
       _ <- IoOps.putStrLn(r)
     } yield ()
 
   def loadStdLib(): IO[String] = IO(Source.fromResource("std/lib.scm")) map (_.mkString)
-
-  def basicEnv(): Env = Primitives.primEnv.toMap
-  // Primitives.primEnv.toMap combineK Map("read" -> LispFunc(Primitives.unaryOp(readFn)))
 
   def parseWithStdLib(lib: String)(expr: String): Either[LispError, LispVal] = {
     def incorrectType[A: Show](n: A) = LispError.IncorrectType(s"Failed to get variable: ${n.show}")
@@ -82,13 +80,13 @@ object Eval {
   def evalCarComposition(x: LispVal)(xs: List[LispVal])(arg: LispList): LispEval[LispVal] =
     x match {
       case LispAtom(_) => eval(arg) >>= (a => eval(LispList(List(LispAtom("car"), a))))
-      case _           => LispList(xs).of[LispEval]
+      case _           => x.of[LispEval]
     }
 
   def evalCdrComposition(x: LispVal)(xs: List[LispVal])(arg: LispList): LispEval[LispVal] =
     x match {
       case LispAtom(_) => eval(arg) >>= (a => eval(LispList(List(LispAtom("cdr"), a))))
-      case _           => x.of[LispEval]
+      case _           => LispList(xs).of[LispEval]
     }
 
   def evalBody(a: LispVal): LEval = a match {

@@ -157,4 +157,56 @@ class ParserSpec extends FreeSpec with TableDrivenPropertyChecks with Matchers {
     }
   }
 
+  "readExprFile parser" - {
+    "should successfully parse lisp exp file" in {
+      val cases = Table(
+        ("text", "expected result"),
+        (
+          raw"""
+              (define id (lambda (obj) obj))
+              (define compose (lambda (f g) (lambda (arg) (f (g arg)))))
+            """,
+          ParseResult.Done(
+            "",
+            LispList(
+              List(
+                LispList(
+                  List(
+                    LispAtom("define"),
+                    LispAtom("id"),
+                    LispList(
+                      List(LispAtom("lambda"), LispList(List(LispAtom("obj"))), LispAtom("obj"))
+                    )
+                  )
+                ),
+                LispList(
+                  List(
+                    LispAtom("define"),
+                    LispAtom("compose"),
+                    LispList(
+                      List(
+                        LispAtom("lambda"),
+                        LispList(List(LispAtom("f"), LispAtom("g"))),
+                        LispList(
+                          List(
+                            LispAtom("lambda"),
+                            LispList(List(LispAtom("arg"))),
+                            LispList(
+                              List(LispAtom("f"), LispList(List(LispAtom("g"), LispAtom("arg"))))
+                            )
+                          )
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+
+      forAll(cases) { (text, expected) => Parser.readExprFile(text) shouldBe expected }
+    }
+  }
 }
