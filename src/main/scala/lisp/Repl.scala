@@ -9,7 +9,7 @@ import IoOps.{putStrLn, putStr, readLn}
 object Repl {
   def run(): IO[Unit] =
     for {
-      _ <- putStr("repl: ")
+      _ <- putStr("λ: ")
       line <- readLn
       _ <- line match {
         case None    => putStrLn("👋")
@@ -23,7 +23,7 @@ object Repl {
       case Right(v) => v.pure[IO]
     }
 
-  def processToASTPreview(str: String): IO[Unit] = IO(print(Eval.runParserForASTPreview(str)))
+  def processToASTPreview(str: String): IO[Unit] = putStr(Eval.runParserForASTPreview(str))
 
   def exec[A](a: IO[A]): IO[Either[String, A]] =
     a.attempt map (_ leftMap {

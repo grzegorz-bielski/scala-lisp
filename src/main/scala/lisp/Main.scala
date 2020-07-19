@@ -3,15 +3,17 @@ package lisp
 import cats.effect._
 import cats.implicits._
 
+import IoOps.putStrLn
+
 object Main extends IOApp {
-  override def run(args: List[String]): IO[ExitCode] = args.headOption match {
-    case Some("repl") => Repl.run().as(ExitCode.Success)
-    case Some(str)    => Eval.run(str).as(ExitCode.Success)
-    case None | Some("help") =>
+  override def run(args: List[String]): IO[ExitCode] = args match {
+    case List("repl")      => Repl.run().as(ExitCode.Success)
+    case List("eval", str) => Eval.run(str).as(ExitCode.Success)
+    case Nil | List("help") =>
       (for {
-        _ <- IoOps.putStrLn("No arguments passed.")
-        _ <- IoOps.putStrLn("'repl' - start interactive repl session")
-        _ <- IoOps.putStrLn("'./file/to/interpret.scm' - interpret a file at given path")
+        _ <- putStrLn("No arguments passed.")
+        _ <- putStrLn("'repl' - start interactive repl session")
+        _ <- putStrLn("'./file/to/interpret.scm' - interpret a file at given path")
       } yield ()).as(ExitCode.Success)
   }
 }

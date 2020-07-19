@@ -19,7 +19,6 @@ object Eval {
     for {
       stdLib <- loadStdLib
       evalStr = parseWithStdLib(stdLib)(expr) fold ((_.raise), evalBody)
-
       toRun = evalStr.unEval(Primitives.primEnv.toMap)
       r <- toRun map (_.show)
       _ <- IoOps.putStrLn(r)
