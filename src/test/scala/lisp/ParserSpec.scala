@@ -8,7 +8,6 @@ import org.scalatest.prop.TableDrivenPropertyChecks
 import LispVal._
 
 class ParserSpec extends FreeSpec with TableDrivenPropertyChecks with Matchers {
-
   "string parser" - {
     "should successfully parse valid strings" in {
       val cases = Table(

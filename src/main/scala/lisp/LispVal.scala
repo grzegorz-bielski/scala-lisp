@@ -2,6 +2,7 @@ package lisp
 
 import io.estatico.newtype.macros.newtype
 import cats.data.Kleisli
+import cats.data.StateT
 import cats.{Monad, Functor, Applicative, Show}
 import cats.implicits._
 import cats.effect.{LiftIO, IO, Effect, Async}
