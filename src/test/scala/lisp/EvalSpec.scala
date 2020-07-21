@@ -101,6 +101,10 @@ class EvalSpec extends FreeSpec with TableDrivenPropertyChecks with Matchers {
       val cases = Table(
         ("lisp val", "expected result"),
         (
+          LispList(List(LispAtom("write"), LispNum(1), LispNum(2))),
+          LispList(List(LispNum(1), LispNum(2)))
+        ),
+        (
           LispList(List(LispAtom("write"), LispStr("kek"))),
           LispStr(raw""""kek"""")
         ),
@@ -136,31 +140,86 @@ class EvalSpec extends FreeSpec with TableDrivenPropertyChecks with Matchers {
   "eval if" - {
     "should successfully evaluate a valid if expression" in {
       val cases = Table(
+        ("lisp val", "expected result"),
+        (
+          LispList(List(LispAtom("if"), LispBool(true), LispStr("was true"), LispStr("was false"))),
+          LispStr("was true")
+        ),
+        (
+          LispList(
+            List(LispAtom("if"), LispBool(false), LispStr("was true"), LispStr("was false"))
+          ),
+          LispStr("was false")
+        )
+      )
+
+      forAll(cases) { (lv, expected) =>
+        Eval.eval(lv).unEval(emptyEnv).unsafeRunSync shouldBe expected
+      }
+    }
+  }
+
+  "eval let" - {
+    "should successfully evaluate a valid let syntax" in {
+      val cases = Table(
+        ("lisp val", "expected result"),
+        (
+          LispList(
+            List(
+              LispAtom("let"),
+              LispList(List(LispAtom("x"), LispNum(1))),
+              LispAtom("x")
+            )
+          ),
+          LispNum(1)
+        )
+      )
+
+      forAll(cases) { (lv, expected) =>
+        Eval.eval(lv).unEval(emptyEnv).unsafeRunSync shouldBe expected
+      }
+    }
+  }
+
+  "eval define" - {
+    "should successfully evaluate a valid define syntax" in {
+      val cases = Table(
+        ("lisp val", "expected result"),
+        (
+          LispList(
+            List(
+              LispAtom("define"),
+              LispAtom("id"),
+              LispList(
+                List(LispAtom("lambda"), LispList(List(LispAtom("obj"))), LispAtom("obj"))
+              )
+            )
+          ),
+          LispAtom("id")
+        )
+      )
+
+      forAll(cases) { (lv, expected) =>
+        Eval.eval(lv).unEval(emptyEnv).unsafeRunSync shouldBe expected
+      }
+    }
+  }
+
+  "eval lambda" - {
+    "should successfully evaluate a valid lambda" in {
+      val cases = Table(
         ("lisp val", "expected result")
-        // (
-        //   LispList(List(LispAtom("write"), LispStr("kek"))),
-        //   LispStr(raw""""kek"""")
-        // ),
-        // (
-        //   LispList(List(LispAtom("write"), LispList(List(LispNum(1), LispNum(2))))),
-        //   LispStr("(1 2)")
-        // ),
         // (
         //   LispList(
         //     List(
-        //       LispAtom("write"),
+        //       LispAtom("define"),
+        //       LispAtom("id"),
         //       LispList(
-        //         List(
-        //           LispAtom("define"),
-        //           LispAtom("id"),
-        //           LispList(
-        //             List(LispAtom("lambda"), LispList(List(LispAtom("obj"))), LispAtom("obj"))
-        //           )
-        //         )
+        //         List(LispAtom("lambda"), LispList(List(LispAtom("obj"))), LispAtom("obj"))
         //       )
         //     )
         //   ),
-        //   LispStr("(define id (lambda (obj) obj))")
+        //   LispAtom("id")
         // )
       )
 
