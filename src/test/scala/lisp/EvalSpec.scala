@@ -88,7 +88,7 @@ class EvalSpec extends FreeSpec with TableDrivenPropertyChecks with Matchers {
         )
       )
 
-      forAll(cases) { (lv, expected) =>
+      forAll(cases) { (lv, _expected) =>
         val program = Eval.eval(lv).unEval(emptyEnv)
 
         an[LispVal.LispError.VariableNotInScope] should be thrownBy program.unsafeRunSync
@@ -219,5 +219,129 @@ class EvalSpec extends FreeSpec with TableDrivenPropertyChecks with Matchers {
         Eval.eval(lv).unEval(emptyEnv).unsafeRunSync should matchPattern(pattern)
       }
     }
+  }
+
+  "eval cdr" - {
+    "should successfully evaluate a valid cdr" in {
+      val cases = Table(
+        ("lisp val", "expected result"),
+        (
+          LispList(
+            List(
+              LispAtom("cdr"),
+              LispList(List(LispNum(1), LispNum(2), LispNum(3)))
+            )
+          ),
+          LispList(List(LispNum(2), LispNum(3)))
+        ),
+        (
+          LispList(
+            List(
+              LispAtom("cdr"),
+              LispList(List(LispAtom("quote"), LispList(List(LispNum(1), LispNum(2), LispNum(3)))))
+            )
+          ),
+          LispList(List(LispNum(2), LispNum(3)))
+        ),
+        (
+          LispList(
+            List(
+              LispAtom("cdr"),
+              LispList(List(LispNum(1), LispNum(2)))
+            )
+          ),
+          LispList(List(LispNum(2)))
+        ),
+        (
+          LispList(
+            List(
+              LispAtom("cdr"),
+              LispList(List(LispNum(1)))
+            )
+          ),
+          LispList(List())
+        ),
+        (
+          LispList(
+            List(
+              LispAtom("cdr"),
+              LispList(List())
+            )
+          ),
+          LispList(List())
+        )
+      )
+
+      forAll(cases) { (lv, expected) =>
+        Eval.eval(lv).unEval(emptyEnv).unsafeRunSync shouldBe expected
+      }
+    }
+  }
+
+  "eval car" - {
+    "should successfully evaluate a valid cdr" in {
+      val cases = Table(
+        ("lisp val", "expected result"),
+        (
+          LispList(
+            List(
+              LispAtom("car"),
+              LispList(List(LispNum(1), LispNum(2), LispNum(3)))
+            )
+          ),
+          LispNum(1)
+        ),
+        (
+          LispList(
+            List(
+              LispAtom("car"),
+              LispList(List(LispAtom("quote"), LispList(List(LispNum(1), LispNum(2), LispNum(3)))))
+            )
+          ),
+          LispNum(1)
+        ),
+        (
+          LispList(
+            List(
+              LispAtom("car"),
+              LispList(List(LispNum(1), LispNum(2)))
+            )
+          ),
+          LispNum(1)
+        ),
+        (
+          LispList(
+            List(
+              LispAtom("car"),
+              LispList(List(LispNum(1)))
+            )
+          ),
+          LispNum(1)
+        ),
+        (
+          LispList(
+            List(
+              LispAtom("car"),
+              LispList(List(LispNum(1)))
+            )
+          ),
+          LispNum(1)
+        ),
+        (
+          LispList(
+            List(
+              LispAtom("car"),
+              LispList(List())
+            )
+          ),
+          LispList(List())
+        )
+      )
+
+      forAll(cases) { (lv, expected) =>
+        Eval.eval(lv).unEval(emptyEnv).unsafeRunSync shouldBe expected
+      }
+    }
+
   }
 }

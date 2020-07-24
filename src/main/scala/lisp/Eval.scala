@@ -63,11 +63,15 @@ object Eval {
     case LispList(LispAtom("begin") :: rest)                        => evalBody(LispList(rest))
     case LispList(List(LispAtom("define"), varExp, expr))           => evalDefine(varExp)(expr)
     case LispList(List(LispAtom("lambda"), LispList(params), expr)) => evalLambda(params)(expr)
+
+    // this should probably by defined in Prim...
     case LispList(List(LispAtom("cdr"), LispList(List(LispAtom("quote"), LispList(x :: xs))))) =>
       LispList(xs).of[LispEval]
+    case LispList(List(LispAtom("cdr"), LispList(Nil)))           => LispList(Nil).of[LispEval]
     case LispList(List(LispAtom("cdr"), arg @ LispList(x :: xs))) => evalCdrComposition(x)(xs)(arg)
     case LispList(List(LispAtom("car"), LispList(List(LispAtom("quote"), LispList(x :: xs))))) =>
-      LispList(xs).of[LispEval]
+      x.of[LispEval]
+    case LispList(List(LispAtom("car"), LispList(Nil)))           => LispList(Nil).of[LispEval]
     case LispList(List(LispAtom("car"), arg @ LispList(x :: xs))) => evalCarComposition(x)(xs)(arg)
 
     case LispList(x :: xs) => evalApplication(x)(xs)
