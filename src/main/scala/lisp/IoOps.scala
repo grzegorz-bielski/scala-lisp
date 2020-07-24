@@ -5,7 +5,6 @@ import cats.effect.{IO, LiftIO}
 import cats.implicits._
 import cats.Foldable
 import cats.effect.Resource
-import scala.io.StdIn.readLine
 
 object IoOps {
   def doesFileExist(path: String): IO[Boolean] = {
@@ -39,5 +38,9 @@ object IoOps {
 
   def putStr(txt: String) = IO(print(txt))
 
-  def readLn() = IO(readLine) map Option.apply
+  def readLn() = {
+    import scala.io.StdIn.readLine
+
+    IO(readLine) map Option.apply
+  }
 }

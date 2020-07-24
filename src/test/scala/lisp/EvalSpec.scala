@@ -208,23 +208,15 @@ class EvalSpec extends FreeSpec with TableDrivenPropertyChecks with Matchers {
   "eval lambda" - {
     "should successfully evaluate a valid lambda" in {
       val cases = Table(
-        ("lisp val", "expected result")
-        // (
-        //   LispList(
-        //     List(
-        //       LispAtom("define"),
-        //       LispAtom("id"),
-        //       LispList(
-        //         List(LispAtom("lambda"), LispList(List(LispAtom("obj"))), LispAtom("obj"))
-        //       )
-        //     )
-        //   ),
-        //   LispAtom("id")
-        // )
+        ("lisp val", "expected result"),
+        (
+          LispList(List(LispAtom("lambda"), LispList(List(LispAtom("obj"))), LispAtom("obj"))),
+          { case LispLambda(fn: LispVal.Fn, env: Env) => }: PartialFunction[Any, _]
+        )
       )
 
-      forAll(cases) { (lv, expected) =>
-        Eval.eval(lv).unEval(emptyEnv).unsafeRunSync shouldBe expected
+      forAll(cases) { (lv, pattern) =>
+        Eval.eval(lv).unEval(emptyEnv).unsafeRunSync should matchPattern(pattern)
       }
     }
   }

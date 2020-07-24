@@ -5,6 +5,7 @@ import cats.implicits._
 import cats.effect.IO
 import cats.Show
 import scala.io.Source
+import cats.effect.LiftIO
 
 object Eval {
   import LispVal._

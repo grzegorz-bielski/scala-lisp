@@ -58,6 +58,8 @@ object LispVal {
         def local[A](f: Env => Env)(fa: LispEval[A]): LispEval[A] =
           LispEval(Kleisli.local(f)(fa.unEval))
       }
+
+    def putStrLn(a: String) = LiftIO[LispEval].liftIO(IoOps.putStrLn(a))
   }
 
   sealed trait LispError extends Throwable {
