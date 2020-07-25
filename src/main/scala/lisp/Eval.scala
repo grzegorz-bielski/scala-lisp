@@ -21,7 +21,8 @@ object Eval {
       _ <- IoOps.putStrLn(r)
     } yield ()
 
-  def loadStdLib(): IO[String] = IO(Source.fromResource("std/lib.scm")) map (_.mkString)
+  def loadStdLib(): IO[String] =
+    IO(Source.fromResource("std/lib.scm")) map (_.mkString)
 
   def parseWithStdLib(lib: String)(expr: String): Either[LispError, LispVal] = {
     def incorrectType[A: Show](n: A) = LispError.IncorrectType(s"Failed to get variable: ${n.show}")
@@ -40,12 +41,6 @@ object Eval {
   }
 
   def runParserForASTPreview(str: String): String = Parser.readExpr(str).either foldMap (_.show)
-
-  def parseFn(a: LispVal): LispEval[LispVal] = a match {
-    case LispStr(str) =>
-      Parser.readExpr(str).either fold (LispError.CouldNotParse(_).raise, _.of[LispEval])
-    case _ => LispError.IncorrectType(s"Expected string").raise
-  }
 
   def eval(a: LispVal): LispEval[LispVal] = a match {
     case v @ LispNum(_)                                             => v.of[LispEval]

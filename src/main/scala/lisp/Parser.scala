@@ -12,10 +12,8 @@ object Parser {
   def untilEndOfLine[A](p: Parser[A]) =
     manyUntil(p, char('\n') | char('\r')).void
 
-  val skipComment =
+  val comment =
     skipWhitespace ~> string(";;") ~> skipWhitespace ~> untilEndOfLine(anyChar)
-
-  val skipComments = skipMany(skipComment)
 
   val lispStr: Parser[LispVal] =
     (char('"') ~> many(noneOf("\"")) <~ char('"')) map (s => LispStr(s.mkString))
@@ -42,7 +40,7 @@ object Parser {
   val lispSExp: Parser[LispVal] = char('(') ~> lispList <~ char(')')
 
   val lispList: Parser[LispVal] =
-    (many(lispExp) <~ skipComments sepBy whitespace) map (ll => LispList(ll.flatten))
+    many(lispExp) sepBy (whitespace | comment) map (ll => LispList(ll.flatten))
 
   val lispQuoted: Parser[LispVal] =
     (char('\'') ~> lispExp) map (e => LispList(List(LispAtom("quote"), e)))

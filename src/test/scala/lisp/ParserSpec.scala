@@ -165,7 +165,7 @@ class ParserSpec extends FreeSpec with TableDrivenPropertyChecks with Matchers {
             """, ParseResult.Done("            ", ()))
       )
 
-      forAll(cases) { (text, expected) => Parser.skipComment parseOnly text shouldBe expected }
+      forAll(cases) { (text, expected) => Parser.comment parseOnly text shouldBe expected }
     }
   }
 
@@ -174,10 +174,10 @@ class ParserSpec extends FreeSpec with TableDrivenPropertyChecks with Matchers {
       val cases = Table(
         ("text", "expected result"),
         (
-          raw"""
-              (define id (lambda (obj) obj))
-              (define compose (lambda (f g) (lambda (arg) (f (g arg)))))
-            """,
+          """|
+             |(define id (lambda (obj) obj))
+             |(define compose (lambda (f g) (lambda (arg) (f (g arg)))))
+             |""".stripMargin,
           ParseResult.Done(
             "",
             LispList(
@@ -216,20 +216,18 @@ class ParserSpec extends FreeSpec with TableDrivenPropertyChecks with Matchers {
             )
           )
         ),
-        (raw"""
-            ;; 2
-            1
-            """, ParseResult.Done("", LispList(List(LispNum(1))))),
-        (raw"""
-            1
-            ;; 2
-            """, ParseResult.Done("", LispList(List(LispNum(1))))),
+        ("""|;; 2
+            |1
+            |""".stripMargin, ParseResult.Done("", LispList(List(LispNum(1))))),
+        ("""|1
+            |;; 2
+            |""".stripMargin, ParseResult.Done("", LispList(List(LispNum(1))))),
         (
-          raw"""
-            (define xd 4)
-            ;; a
-            (define xdd 4)
-            """,
+          """|(define xd 4)
+             |;; a
+             |;; b
+             |(define xdd 4)
+             |""".stripMargin,
           ParseResult.Done(
             "",
             LispList(
