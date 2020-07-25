@@ -342,6 +342,5 @@ class EvalSpec extends FreeSpec with TableDrivenPropertyChecks with Matchers {
         Eval.eval(lv).unEval(emptyEnv).unsafeRunSync shouldBe expected
       }
     }
-
   }
 }

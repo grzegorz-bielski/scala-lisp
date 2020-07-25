@@ -17,3 +17,9 @@ It includes an interactive REPL, file system access and its own standard library
   λ: (+ 1 2)
   3
   ```
+
+## TODO
+
+- IO helpers tests
+- declaring variables in REPL
+- REPL tests

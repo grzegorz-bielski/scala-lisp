@@ -147,12 +147,25 @@ class ParserSpec extends FreeSpec with TableDrivenPropertyChecks with Matchers {
       val cases = Table(
         ("text", "expected result"),
         (raw"""  () """, ParseResult.Done("", LispList(List()))),
-        (raw"""  
-              1 
+        (raw"""
+              1
             """, ParseResult.Done("", LispNum(1)))
       )
 
       forAll(cases) { (text, expected) => Parser.readExpr(text) shouldBe expected }
+    }
+  }
+
+  "comments parser" - {
+    "should successfully parse lisp comment" in {
+      val cases = Table(
+        ("text", "expected result"),
+        (raw"""
+            ;; sth is written here
+            """, ParseResult.Done("            ", ()))
+      )
+
+      forAll(cases) { (text, expected) => Parser.skipComment parseOnly text shouldBe expected }
     }
   }
 
@@ -199,6 +212,30 @@ class ParserSpec extends FreeSpec with TableDrivenPropertyChecks with Matchers {
                     )
                   )
                 )
+              )
+            )
+          )
+        ),
+        (raw"""
+            ;; 2
+            1
+            """, ParseResult.Done("", LispList(List(LispNum(1))))),
+        (raw"""
+            1
+            ;; 2
+            """, ParseResult.Done("", LispList(List(LispNum(1))))),
+        (
+          raw"""
+            (define xd 4)
+            ;; a
+            (define xdd 4)
+            """,
+          ParseResult.Done(
+            "",
+            LispList(
+              List(
+                LispList(List(LispAtom("define"), LispAtom("xd"), LispNum(4))),
+                LispList(List(LispAtom("define"), LispAtom("xdd"), LispNum(4)))
               )
             )
           )

@@ -9,6 +9,14 @@ object Parser {
 
   val symbol = oneOf("!#$%&|*+-/:<=>?@^_~")
 
+  def untilEndOfLine[A](p: Parser[A]) =
+    manyUntil(p, char('\n') | char('\r')).void
+
+  val skipComment =
+    skipWhitespace ~> string(";;") ~> skipWhitespace ~> untilEndOfLine(anyChar)
+
+  val skipComments = skipMany(skipComment)
+
   val lispStr: Parser[LispVal] =
     (char('"') ~> many(noneOf("\"")) <~ char('"')) map (s => LispStr(s.mkString))
 
@@ -33,7 +41,8 @@ object Parser {
 
   val lispSExp: Parser[LispVal] = char('(') ~> lispList <~ char(')')
 
-  val lispList: Parser[LispVal] = (many(lispExp) sepBy whitespace) map (ll => LispList(ll.flatten))
+  val lispList: Parser[LispVal] =
+    (many(lispExp) <~ skipComments sepBy whitespace) map (ll => LispList(ll.flatten))
 
   val lispQuoted: Parser[LispVal] =
     (char('\'') ~> lispExp) map (e => LispList(List(LispAtom("quote"), e)))
