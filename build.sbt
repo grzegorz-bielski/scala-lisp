@@ -14,7 +14,7 @@ lazy val root = (project in file("."))
   .settings(
     name := "scala-lisp",
     libraryDependencies += scalaTest % Test,
-    libraryDependencies += "org.tpolecat" %% "atto-core" % "0.7.0",
+    libraryDependencies += "org.tpolecat" %% "atto-core" % "0.9.5",
     libraryDependencies += "org.tpolecat" %% "atto-refined" % "0.7.0",
     libraryDependencies += "org.typelevel" %% "cats-core" % "2.0.0",
     libraryDependencies += "org.typelevel" %% "cats-effect" % "2.1.3",
