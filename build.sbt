@@ -17,7 +17,7 @@ lazy val root = (project in file("."))
     libraryDependencies += "org.tpolecat" %% "atto-core" % "0.7.0",
     libraryDependencies += "org.tpolecat" %% "atto-refined" % "0.7.0",
     libraryDependencies += "org.typelevel" %% "cats-core" % "2.0.0",
-    libraryDependencies += "org.typelevel" %% "cats-effect" % "2.1.3",
+    libraryDependencies += "org.typelevel" %% "cats-effect" % "3.6-0142603",
     libraryDependencies += "org.typelevel" %% "cats-mtl-core" % "0.7.0",
     libraryDependencies += "io.estatico" %% "newtype" % "0.4.4"
   )
